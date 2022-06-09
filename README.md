@@ -7,4 +7,5 @@ The dataset was made for the Tampere University DATA.ML.200 Pattern Recognition 
 
 main file tensorflow.ipynb
 
+Image correlation map
 ![png](heatmaps/heatmap_1000_6.png)
