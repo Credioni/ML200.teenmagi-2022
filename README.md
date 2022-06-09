@@ -7,4 +7,4 @@ The dataset was made for the Tampere University DATA.ML.200 Pattern Recognition 
 
 main file tensorflow.ipynb
 
-![Alt text](relative/heatmaps/?raw=true "Title")
+![Alt text](relative/heatmaps/heatmap_1000_6.png?raw=true "Title")
