@@ -13,21 +13,21 @@ import math
 
 from os import walk
 import pickle
-from sklearn.neighbors import KNeighborsClassifier
 
 from tempfile import TemporaryFile
 
 from IPython.display import clear_output
 from tqdm.notebook import tqdm
-from tqdm import tqdm
+#from tqdm import tqdm
 
 
 class TrainingSetManager():
     def __init__(self, datapath="data/"):
-        # (grayscale_img, cat_index)
+        # (grayscale_img, cat_index) for denoiser 
         self.image_set = None
         self.nimage_set = None
 
+        # Grayscaled images
         self.training_x = None
         self.training_y = None
         self.validation_x = None
@@ -45,46 +45,58 @@ class TrainingSetManager():
             try:
                 with open(self.path + "training_manager.dat", 'rb') as pickleFile:
                     data = pickle.load(pickleFile)
-                [self.training_x, self.training_y, self.validation_x, self.nimage_set]=data
+
+                [self.training_x, self.training_y, self.validation_x, self.nimage_set] = data
                 self.nimage_set = list(zip(self.nimage_set[0], self.nimage_set[1]))
                 print("Loaded grayscaled datasets")
                 break
             except:
                 if i==1:
-                    print("Update went wrong; returning")
+                    print("Couldnt load grayscaled sets.")
                     return
-                print("Couldnt load grayscaled sets.")
-                print("Updating...")
-                self.update()
-                print("Update completed.")
+                
+                print("Trying to update training manager data")
+                [self.training_x, self.training_y, self.validation_x, self.nimage_set] = self.update()
 
 
     def update(self):
         try:
-            with open("data/training_x.dat", 'rb') as pickleFile:
-                self.training_x = pickle.load(pickleFile)
-            with open("data/training_y.dat", 'rb') as pickleFile:
-                self.training_y = pickle.load(pickleFile)
-            with open("data/validation_x.dat", 'rb') as pickleFile:
-                self.validation_x = pickle.load(pickleFile)
-            del self.training_y[216805]
-            del self.training_x[216805]
+            with open(self.path + "training_x.dat", 'rb') as pickleFile:
+                training_x = pickle.load(pickleFile)
+            with open(self.path + "training_y.dat", 'rb') as pickleFile:
+                training_y = pickle.load(pickleFile)
+            with open(self.path + "validation_x.dat", 'rb') as pickleFile:
+                validation_x = pickle.load(pickleFile)
+            
+            # deleting broken training set img
+            del training_y[216805]
+            del training_x[216805]
+            print("Training data loaded")
         except:
-            print("didnt loaded")
-            return
-        self.training_x = self.grayscale_images(self.training_x)
-        self.validation_x = self.grayscale_images(self.validation_x)
+            print("\nUpdate: couldnt load datasets")
+            print("Manually load and add them to data/* folder")
+            print("https://www.kaggle.com/competitions/teenmagi-2022/data \n")
+            return False
+
+        #self.training_x   = self.grayscale_images(self.training_x)
+        #self.validation_x = self.grayscale_images(self.validation_x)
+        training_x   = self.grayscale_images(training_x)
+        validation_x = self.grayscale_images(validation_x)
+
         tmp = []
-        for y in self.training_y:
+        for y in training_y:
             tmp.append(int(y))
-        self.training_y = np.array(tmp)
+        training_y = np.array(tmp)
 
         norm_imgs, std = self.get_normalized_images(self.training_x, self.training_y)
 
-        tmp_data = [self.training_x, self.training_y, self.validation_x, [norm_imgs, std]]
+        tmp_data = [training_x, training_y, validation_x, [norm_imgs, std]]
 
+        print("Saving data as training_manager.dat")
         with open('data/training_manager.dat', 'wb') as handle:
             pickle.dump(tmp_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        return [training_x, training_y, validation_x, [norm_imgs, std]]
 
     def gen_training_set(self,
                              #category_indices=[i for i in range(1001)],
@@ -309,7 +321,7 @@ class TrainingSetManager():
 
     def grayscale_images(self, img_set, shape=(8,8,1), normalize=True):
         images = []
-        for img in img_set:
+        for img in tqdm(img_set, desc="Grayscaling images"):
             tmp_image = np.array([x[:,0] for x in img])
             tmp_image = np.reshape(tmp_image, shape)
             if normalize:
@@ -323,7 +335,7 @@ class TrainingSetManager():
         elements = [0 for i in range(cats)]
 
         # Calculate mean
-        for idx, img in enumerate(set_img):
+        for idx, img in tqdm(enumerate(set_img), desc="Calculating means"):
             img_class = set_img_cat[idx]
             tmp_image = img
             tmp_image = np.reshape(tmp_image, (8,8))
@@ -335,7 +347,7 @@ class TrainingSetManager():
 
         # Calculate variance
         variances = [np.zeros((8,8)) for i in range(cats)]
-        for iimg, img in enumerate(set_img):
+        for iimg, img in tqdm(enumerate(set_img), desc="Calculating variances"):
             img_cat = set_img_cat[iimg]
             mean_img = np.array(norm_images[img_cat])
 
@@ -388,7 +400,28 @@ class TrainingSetManager():
             tmp_imgs[i] = np.reshape(tmp, shape)
         return tmp_imgs
 
+    def plot_history(history):
+        acc = history.history['accuracy']
+        loss = history.history['loss']
 
+        epochs_range = range(len(history.history['loss']))
+
+        plt.figure(figsize=(8, 8))
+        plt.subplot(1, 2, 1)
+        plt.plot(epochs_range, acc, label='Training Accuracy')
+        if 'val_accuracy' in history.history:
+            plt.plot(epochs_range, history.history['val_accuracy'], label='Validation Accuracy')
+        plt.legend(loc='upper left')
+        plt.ylim(0,1)
+        plt.title('Training and Validation Accuracy')
+        
+        plt.subplot(1, 2, 2)
+        plt.plot(epochs_range, loss, label='Training Loss')
+        if 'val_loss' in history.history:
+            plt.plot(epochs_range, history.history['val_loss'], label='Validation Loss')
+        plt.legend(loc='upper right')
+        plt.title('Training and Validation Loss')
+        plt.show()
 
 
 

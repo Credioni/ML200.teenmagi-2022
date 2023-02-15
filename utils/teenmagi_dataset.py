@@ -40,6 +40,7 @@ class TeenmagiDataset(Sequence):
         self.n_valid = n_valid
         self.categories = categories
 
+        # These are areas which are mixed. Seen in correlation map 
         self.combine_areas = [
                  #(1,   215),
                  #(229, 249),
@@ -50,9 +51,11 @@ class TeenmagiDataset(Sequence):
                  #(679, 729)
                 ]
 
-        path = "C:/Users/panup/Coding/Tampereen Yliopisto/DATA.ML.200 Pattern Recognition and Machine Learning/teenmagi-2022/data"
-        path = path + "/training_manager.dat"
-        #path = "data/training_manager.dat"
+        
+        #path = os.getcwd()
+        #print(path)
+        #path = path + "\\training_manager.dat"
+        path = "data/training_manager.dat"
 
         with open(path, 'rb') as pickleFile:
             data = pickle.load(pickleFile)
@@ -151,7 +154,7 @@ class TeenmagiDataset(Sequence):
         if ci == None:
             if len(iset[0]) == 0:
                 re_ci = re_ci[1:]
-            ci = np.random.choice()
+            ci = np.random.choice(re_ci)
 
         img_i = np.random.choice(iset[ci])
 
